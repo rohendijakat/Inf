@@ -698,3 +698,73 @@
           </div>
           <div id="bt_msg" style="margin-top:10px"></div>
           <div class="hr"></div>
+          <div class="chartBox">
+            <canvas id="bt_chart" width="980" height="260"></canvas>
+          </div>
+          <div id="bt_summary" style="margin-top:12px"></div>
+        `;
+
+        $("#bt_run").addEventListener("click", () => runBacktest());
+        $("#bt_demo").addEventListener("click", () => loadDemoCandles());
+        $("#bt_clear").addEventListener("click", () => { S.backtest.csv = ""; renderBacktest(); });
+
+        if (S.backtest.result) drawChart(S.backtest.result.equityCurve || []);
+      }
+
+      function pullBacktestInputs(){
+        S.backtest.symbol = ($("#bt_symbol").value || "ETHUSD").trim();
+        S.backtest.startCash = floatV("#bt_cash", 10000);
+        S.backtest.minTradeCash = floatV("#bt_min", 25);
+        S.backtest.csv = $("#bt_csv").value || "";
+      }
+
+      async function runBacktest(){
+        if (!S.apiOk) return toast("connect to API first", "warn");
+        const s = selectedStrategy();
+        if (!s) return toast("select a strategy", "warn");
+        pullBacktestInputs();
+        const msg = $("#bt_msg");
+        msg.innerHTML = "";
+        try{
+          const body = {
+            strategyId: s.id,
+            symbol: S.backtest.symbol,
+            candlesCsv: S.backtest.csv,
+            maxBytes: S.backtest.maxBytes,
+            startCash: S.backtest.startCash,
+            minTradeCash: S.backtest.minTradeCash
+          };
+          const res = await apiSend("/api/backtest", "POST", body);
+          const out = res.result;
+          S.backtest.result = out;
+          msg.innerHTML = `<div class="ok">Backtest complete.</div>`;
+          drawChart(out.equityCurve || []);
+          renderSummary(out);
+        }catch(e){
+          S.backtest.result = null;
+          msg.innerHTML = `<div class="err">Backtest failed: ${escapeHtml(e.message)}</div>`;
+          clearChart();
+          $("#bt_summary").innerHTML = "";
+        }
+      }
+
+      function renderSummary(r){
+        if (!r) return;
+        const f = (x) => (typeof x === "number" ? x.toFixed(4) : String(x));
+        const pct = (x) => (typeof x === "number" ? (x*100).toFixed(2)+"%" : String(x));
+        const fills = (r.fills || []).length;
+        const warn = (r.warnings || []).length;
+        $("#bt_summary").innerHTML = `
+          <div class="two">
+            <div class="ok">
+              <div class="row"><strong>Result</strong></div>
+              <div class="row"><span class="muted">Strategy</span> <span class="mono">${escapeHtml(r.strategyName||"")}</span></div>
+              <div class="row"><span class="muted">Trades</span> <span class="mono">${escapeHtml(String(r.trades||0))}</span></div>
+              <div class="row"><span class="muted">Fills</span> <span class="mono">${escapeHtml(String(fills))}</span></div>
+              <div class="row"><span class="muted">Win rate</span> <span class="mono">${escapeHtml(pct(r.winRate||0))}</span></div>
+              <div class="row"><span class="muted">Max DD</span> <span class="mono">${escapeHtml(pct(r.maxDrawdown||0))}</span></div>
+              <div class="row"><span class="muted">End equity</span> <span class="mono">${escapeHtml(f(r.endEquity||0))}</span></div>
+              <div class="row"><span class="muted">Warnings</span> <span class="mono">${escapeHtml(String(warn))}</span></div>
+            </div>
+            <div class="hint">
+              <strong>CSV format</strong><br/>
