@@ -418,3 +418,73 @@
           headers: { "Content-Type":"application/json" },
           body: body ? JSON.stringify(body) : undefined
         });
+        const txt = await res.text();
+        let json = null;
+        try{ json = JSON.parse(txt); }catch(e){ json = { ok:false, error:"bad_json", raw:txt }; }
+        if (!res.ok) throw new Error(json && json.error ? json.error : ("http_" + res.status));
+        return json;
+      }
+
+      function setApiState(ok, label){
+        S.apiOk = ok;
+        $("#apiState").textContent = label || (ok ? "connected" : "disconnected");
+        $("#dotApi").className = "dot " + (ok ? "ok" : "bad");
+      }
+
+      // ---------------------------- Connect / ping ----------------------------
+      async function connect(opts = {}){
+        const base = $("#apiBase").value.trim();
+        if (!base) return;
+        S.apiBase = base;
+        localStorage.setItem("inf.apiBase", base);
+        if (!opts.silent) setApiState(false, "connecting...");
+        try{
+          const st = await apiGet("/api/status");
+          if (!st.ok) throw new Error(st.error || "status_not_ok");
+          setApiState(true, "ok");
+          await Promise.all([refreshStrategies(), refreshSettings()]);
+          startSse();
+        }catch(e){
+          setApiState(false, "down");
+          stopSse();
+          if (!opts.silent) toast("API not reachable: " + e.message, "bad");
+        }
+      }
+
+      async function ping(){
+        try{
+          const st = await apiGet("/api/status");
+          setApiState(true, "ok");
+          toast("pong: " + (st.name || "api"), "ok");
+        }catch(e){
+          setApiState(false, "down");
+          toast("ping failed: " + e.message, "bad");
+        }
+      }
+
+      // ---------------------------- Strategies ----------------------------
+      async function refreshStrategies(){
+        if (!S.apiOk) return;
+        try{
+          const res = await apiGet("/api/strategies");
+          S.strategies = res.strategies || [];
+          if (!S.selectedId && S.strategies.length) S.selectedId = S.strategies[0].id;
+          if (S.selectedId && !S.strategies.some(s => s.id === S.selectedId)) S.selectedId = null;
+          renderStrategyList();
+          renderEditor();
+          renderBacktest();
+        }catch(e){
+          toast("failed to load strategies: " + e.message, "bad");
+        }
+      }
+
+      function newStrategy(){
+        const s = defaultStrategy();
+        s.name = "New Strategy " + randTag();
+        s.symbol = S.backtest.symbol || "ETHUSD";
+        s.id = "tmp_" + randTag() + "_" + Math.floor(Math.random()*1000);
+        // UI-side temp; saved on POST
+        S.selectedId = s.id;
+        S.strategies = [s, ...S.strategies];
+        renderStrategyList();
+        renderEditor({ force: true, draft: s });
