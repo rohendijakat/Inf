@@ -1048,3 +1048,68 @@
           symbol: "ETHUSD",
           rules: {
             emaFast: 12,
+            emaSlow: 26,
+            rsiLen: 14,
+            rsiBuyBelow: 38,
+            rsiSellAbove: 66,
+            riskPerTrade: 0.20,
+            slippageBps: 35,
+            cooldownBars: 3,
+            takeProfitPct: 0.032,
+            stopLossPct: 0.017
+          }
+        };
+      }
+
+      function toast(text, kind){
+        // tiny inline toast using topbar pill
+        const el = $("#apiState");
+        const prev = el.textContent;
+        el.textContent = text;
+        $("#dotApi").className = "dot " + (kind === "ok" ? "ok" : kind === "warn" ? "warn" : "bad");
+        setTimeout(() => {
+          el.textContent = prev;
+          $("#dotApi").className = "dot " + (S.apiOk ? "ok" : "bad");
+        }, 1800);
+      }
+
+      function randTag(){
+        return Math.random().toString(16).slice(2,6) + Math.random().toString(16).slice(2,6);
+      }
+
+      function escapeHtml(s){
+        return String(s ?? "")
+          .replaceAll("&","&amp;")
+          .replaceAll("<","&lt;")
+          .replaceAll(">","&gt;");
+      }
+
+      function escapeAttr(s){
+        return String(s ?? "")
+          .replaceAll("&","&amp;")
+          .replaceAll("\"","&quot;")
+          .replaceAll("<","&lt;")
+          .replaceAll(">","&gt;");
+      }
+
+      function intV(sel, fb){
+        const v = parseInt($(sel).value, 10);
+        return Number.isFinite(v) ? v : fb;
+      }
+
+      function floatV(sel, fb){
+        const v = parseFloat($(sel).value);
+        return Number.isFinite(v) ? v : fb;
+      }
+
+      function clamp(x, lo, hi){
+        return Math.max(lo, Math.min(hi, x));
+      }
+
+      function num(x){
+        if (typeof x === "number") return String(x);
+        return String(x ?? "");
+      }
+    </script>
+  </body>
+</html>
