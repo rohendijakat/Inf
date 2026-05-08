@@ -978,3 +978,73 @@
         const w = c.width, h = c.height;
         g.clearRect(0,0,w,h);
         if (!curve || !curve.length){
+          g.fillStyle = "rgba(255,255,255,.35)";
+          g.font = "12px " + getComputedStyle(document.body).fontFamily;
+          g.fillText("No equity curve to draw.", 14, 24);
+          return;
+        }
+        const ys = curve.map(p => Number(p.equity));
+        const minY = Math.min(...ys);
+        const maxY = Math.max(...ys);
+        const pad = 18;
+        const x0 = pad, y0 = pad, x1 = w - pad, y1 = h - pad;
+
+        // grid
+        g.strokeStyle = "rgba(255,255,255,.08)";
+        for (let i=0;i<=5;i++){
+          const yy = y0 + (y1-y0)*(i/5);
+          g.beginPath(); g.moveTo(x0,yy); g.lineTo(x1,yy); g.stroke();
+        }
+
+        const mapX = (i) => x0 + (x1-x0) * (i / (curve.length-1));
+        const mapY = (v) => {
+          if (maxY === minY) return (y0+y1)/2;
+          const t = (v - minY) / (maxY - minY);
+          return y1 - t*(y1-y0);
+        };
+
+        // gradient line
+        const grad = g.createLinearGradient(x0,y0,x1,y1);
+        grad.addColorStop(0, "rgba(124,92,255,.95)");
+        grad.addColorStop(1, "rgba(0,212,255,.85)");
+        g.lineWidth = 2;
+        g.strokeStyle = grad;
+        g.beginPath();
+        for (let i=0;i<curve.length;i++){
+          const x = mapX(i);
+          const y = mapY(Number(curve[i].equity));
+          if (i === 0) g.moveTo(x,y);
+          else g.lineTo(x,y);
+        }
+        g.stroke();
+
+        // fill
+        g.fillStyle = "rgba(124,92,255,.10)";
+        g.beginPath();
+        for (let i=0;i<curve.length;i++){
+          const x = mapX(i);
+          const y = mapY(Number(curve[i].equity));
+          if (i === 0) g.moveTo(x,y);
+          else g.lineTo(x,y);
+        }
+        g.lineTo(x1,y1);
+        g.lineTo(x0,y1);
+        g.closePath();
+        g.fill();
+
+        // labels
+        g.fillStyle = "rgba(255,255,255,.60)";
+        g.font = "12px " + getComputedStyle(document.body).fontFamily;
+        g.fillText("equity", x0, y0 - 4);
+        g.fillText(minY.toFixed(2), x0, y1 + 14);
+        g.fillText(maxY.toFixed(2), x0, y0 + 12);
+      }
+
+      // ---------------------------- Helpers ----------------------------
+      function defaultStrategy(){
+        return {
+          id: "",
+          name: "Pulse EMA-RSI",
+          symbol: "ETHUSD",
+          rules: {
+            emaFast: 12,
