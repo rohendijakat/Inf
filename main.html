@@ -838,3 +838,73 @@
           renderLogBox();
           toast("log tail loaded", "ok");
         }catch(e){
+          toast("tail failed: " + e.message, "bad");
+        }
+      }
+
+      function renderLogBox(){
+        const box = $("#lg_box");
+        if (!box) return;
+        const filter = ($("#lg_filter")?.value || "").trim().toLowerCase();
+        const rows = (S.logs || []).filter(ev => {
+          if (!filter) return true;
+          const t = String(ev.topic||"").toLowerCase();
+          const m = String(ev.msg||"").toLowerCase();
+          return t.includes(filter) || m.includes(filter);
+        });
+        $("#lg_count").textContent = String(rows.length);
+        const lines = rows.slice(-800).map(ev => {
+          const lvl = String(ev.level||"INFO").toUpperCase();
+          const iso = String(ev.iso||"");
+          const topic = String(ev.topic||"");
+          const msg = String(ev.msg||"");
+          return `<span class="lvl-${escapeAttr(lvl)}">[${escapeHtml(iso)}] ${escapeHtml(lvl)}</span> <span class="muted">${escapeHtml(topic)}</span> ${escapeHtml(msg)}`;
+        });
+        box.innerHTML = lines.join("\n");
+        box.scrollTop = box.scrollHeight;
+        $("#lg_mode").textContent = S.sse ? "stream" : "idle";
+        $("#lg_stream").textContent = S.sse ? "Stop stream" : "Stream";
+        $("#lg_stream").classList.toggle("danger", !!S.sse);
+      }
+
+      function startSse(userToggled){
+        if (!S.apiOk) return;
+        if (S.sse) return;
+        try{
+          const es = new EventSource(apiUrl("/api/logs/stream"));
+          S.sse = es;
+          es.addEventListener("hello", () => { if (userToggled) toast("log stream connected", "ok"); renderLogBox(); });
+          es.addEventListener("ping", () => {});
+          es.addEventListener("log", (ev) => {
+            try{
+              const obj = JSON.parse(ev.data);
+              S.logs.push(obj);
+              if (S.logs.length > 2500) S.logs.splice(0, S.logs.length - 2200);
+              renderLogBox();
+            }catch(e){}
+          });
+          es.onerror = () => {
+            // EventSource will retry; we just surface degraded state if API is down.
+            setApiState(false, "retrying...");
+            renderLogBox();
+          };
+        }catch(e){
+          S.sse = null;
+          toast("SSE failed: " + e.message, "bad");
+        }
+      }
+
+      function stopSse(){
+        if (!S.sse) return;
+        try{ S.sse.close(); }catch(e){}
+        S.sse = null;
+        renderLogBox();
+      }
+
+      // ---------------------------- Settings pane ----------------------------
+      function renderSettings(){
+        const pane = $("#pane_settings");
+        const s = S.settings || { paperFeeBps: 8, apiToken: "", note: "" };
+        pane.innerHTML = `
+          <div class="two">
+            <div class="k">
