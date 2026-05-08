@@ -628,3 +628,73 @@
 
       async function saveEditor(cur){
         if (!S.apiOk) return toast("connect to API first", "warn");
+        const msg = $("#ed_msg");
+        msg.innerHTML = "";
+        try{
+          const draft = parseEditor();
+          // If it looks like a UI temp ID, clear it to let server assign if needed
+          if ((draft.id||"").startsWith("tmp_")) delete draft.id;
+          const res = await apiSend("/api/strategies", "POST", draft);
+          msg.innerHTML = `<div class="ok">Saved.</div>`;
+          await refreshStrategies();
+          const saved = res.strategy;
+          if (saved && saved.id) S.selectedId = saved.id;
+          renderStrategyList();
+          renderEditor();
+        }catch(e){
+          msg.innerHTML = `<div class="err">Save failed: ${escapeHtml(e.message)}</div>`;
+        }
+      }
+
+      async function deleteSelected(cur){
+        if (!S.apiOk) return toast("connect to API first", "warn");
+        if (!cur || !cur.id) return;
+        if (!confirm("Delete strategy " + cur.id + "?")) return;
+        try{
+          await apiSend("/api/strategies?id=" + encodeURIComponent(cur.id), "DELETE");
+          toast("deleted " + cur.id, "warn");
+          S.selectedId = null;
+          await refreshStrategies();
+        }catch(e){
+          toast("delete failed: " + e.message, "bad");
+        }
+      }
+
+      // ---------------------------- Backtest pane ----------------------------
+      function renderBacktest(){
+        const pane = $("#pane_backtest");
+        const s = selectedStrategy();
+        const sid = s ? s.id : "";
+        pane.innerHTML = `
+          <div class="row">
+            <div class="k wide">
+              <label>Strategy</label>
+              <input class="in mono" value="${escapeAttr(sid)}" disabled />
+            </div>
+            <div class="k">
+              <label>Symbol</label>
+              <input id="bt_symbol" class="in mono" value="${escapeAttr(S.backtest.symbol)}" />
+            </div>
+            <div class="k">
+              <label>Start cash</label>
+              <input id="bt_cash" class="in mono" value="${escapeAttr(String(S.backtest.startCash))}" />
+            </div>
+            <div class="k">
+              <label>Min trade cash</label>
+              <input id="bt_min" class="in mono" value="${escapeAttr(String(S.backtest.minTradeCash))}" />
+            </div>
+          </div>
+          <div class="row">
+            <div class="k wide">
+              <label>Candles CSV (ts,open,high,low,close,vol). ts can be ms, seconds, or ISO8601.</label>
+              <textarea id="bt_csv" class="in" spellcheck="false" placeholder="Paste candles CSV here...">${escapeHtml(S.backtest.csv||"")}</textarea>
+            </div>
+          </div>
+          <div class="row">
+            <button id="bt_run" class="btn primary">Run backtest</button>
+            <button id="bt_demo" class="btn">Load demo candles</button>
+            <button id="bt_clear" class="btn">Clear</button>
+            <span class="muted tiny">Chart uses equity curve from the result.</span>
+          </div>
+          <div id="bt_msg" style="margin-top:10px"></div>
+          <div class="hr"></div>
