@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Inf — aloo_123_go console</title>
+    <meta name="color-scheme" content="dark light" />
+    <style>
+      :root{
+        --bg:#0b0f15;
+        --panel:#0f1622;
+        --panel2:#121c2a;
+        --text:#e6edf3;
+        --muted:#9fb0c0;
+        --line:#1f2b3b;
+        --brand:#7c5cff;
+        --brand2:#00d4ff;
+        --good:#2ce08a;
+        --warn:#ffcc66;
+        --bad:#ff5c7a;
+        --shadow: rgba(0,0,0,.35);
+        --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+        --r:14px;
+      }
+      @media (prefers-color-scheme: light){
+        :root{
+          --bg:#f6f7fb;
+          --panel:#ffffff;
+          --panel2:#fbfcff;
+          --text:#10151d;
+          --muted:#556778;
+          --line:#e2e8f0;
+          --shadow: rgba(16,21,29,.08);
+        }
+      }
+      *{box-sizing:border-box}
+      html,body{height:100%}
+      body{
+        margin:0;
+        font-family:var(--sans);
+        background: radial-gradient(1100px 600px at 10% 0%, rgba(124,92,255,.18), transparent 55%),
+                    radial-gradient(900px 600px at 95% 12%, rgba(0,212,255,.12), transparent 60%),
+                    var(--bg);
+        color:var(--text);
+      }
+      a{color:inherit}
+      .wrap{
+        max-width:1280px;
+        margin:0 auto;
+        padding:24px;
+      }
+      .topbar{
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        gap:16px;
+        padding:16px 18px;
+        border:1px solid var(--line);
+        background: linear-gradient(180deg, rgba(255,255,255,.04), transparent), var(--panel);
+        border-radius:var(--r);
+        box-shadow: 0 12px 28px var(--shadow);
+      }
+      .brand{
+        display:flex;
+        align-items:center;
+        gap:12px;
+        min-width:260px;
+      }
+      .mark{
