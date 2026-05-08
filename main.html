@@ -488,3 +488,73 @@
         S.strategies = [s, ...S.strategies];
         renderStrategyList();
         renderEditor({ force: true, draft: s });
+        setTab("editor");
+      }
+
+      function renderStrategyList(){
+        const box = $("#strategyList");
+        box.innerHTML = "";
+        if (!S.strategies.length){
+          $("#strategyHint").style.display = "";
+          const empty = document.createElement("div");
+          empty.className = "muted";
+          empty.textContent = "No strategies yet.";
+          box.appendChild(empty);
+          return;
+        }
+        $("#strategyHint").style.display = "none";
+
+        const sorted = [...S.strategies].sort((a,b) => (b.updatedAt||0) - (a.updatedAt||0));
+        sorted.forEach(s => {
+          const it = document.createElement("div");
+          it.className = "item " + (S.selectedId === s.id ? "on" : "");
+          it.addEventListener("click", () => { S.selectedId = s.id; renderStrategyList(); renderEditor(); renderBacktest(); });
+
+          const top = document.createElement("div");
+          top.className = "split";
+          const left = document.createElement("div");
+          left.innerHTML = `<h3>${escapeHtml(s.name||"(unnamed)")}</h3><small>${escapeHtml(s.symbol||"")}</small>`;
+          const right = document.createElement("div");
+          right.innerHTML = `<span class="badge mono">${escapeHtml(s.id||"")}</span>`;
+          top.appendChild(left);
+          top.appendChild(right);
+
+          it.appendChild(top);
+          box.appendChild(it);
+        });
+      }
+
+      function selectedStrategy(){
+        if (!S.selectedId) return null;
+        return S.strategies.find(x => x.id === S.selectedId) || null;
+      }
+
+      // ---------------------------- Editor pane ----------------------------
+      function renderEditor(opts = {}){
+        const pane = $("#pane_editor");
+        const s = opts.draft || selectedStrategy();
+        if (!s){
+          pane.innerHTML = `<div class="muted">Select a strategy to edit.</div>`;
+          return;
+        }
+        const rules = s.rules || defaultStrategy().rules;
+
+        pane.innerHTML = `
+          <div class="two">
+            <div class="k wide">
+              <label>Strategy name</label>
+              <input id="ed_name" class="in" value="${escapeAttr(s.name||"")}" />
+            </div>
+            <div class="k">
+              <label>Symbol (label only)</label>
+              <input id="ed_symbol" class="in mono" value="${escapeAttr(s.symbol||"ETHUSD")}" />
+            </div>
+          </div>
+          <div class="hr"></div>
+          <div class="two">
+            <div class="k">
+              <label>EMA fast</label>
+              <input id="ed_emaFast" class="in mono" value="${num(rules.emaFast)}" />
+            </div>
+            <div class="k">
+              <label>EMA slow</label>
