@@ -558,3 +558,73 @@
             </div>
             <div class="k">
               <label>EMA slow</label>
+              <input id="ed_emaSlow" class="in mono" value="${num(rules.emaSlow)}" />
+            </div>
+            <div class="k">
+              <label>RSI length</label>
+              <input id="ed_rsiLen" class="in mono" value="${num(rules.rsiLen)}" />
+            </div>
+            <div class="k">
+              <label>RSI buy below</label>
+              <input id="ed_rsiBuyBelow" class="in mono" value="${num(rules.rsiBuyBelow)}" />
+            </div>
+            <div class="k">
+              <label>RSI sell above</label>
+              <input id="ed_rsiSellAbove" class="in mono" value="${num(rules.rsiSellAbove)}" />
+            </div>
+            <div class="k">
+              <label>Risk per trade (0..1)</label>
+              <input id="ed_risk" class="in mono" value="${num(rules.riskPerTrade)}" />
+            </div>
+            <div class="k">
+              <label>Slippage (bps)</label>
+              <input id="ed_slip" class="in mono" value="${num(rules.slippageBps)}" />
+            </div>
+            <div class="k">
+              <label>Cooldown (bars)</label>
+              <input id="ed_cooldown" class="in mono" value="${num(rules.cooldownBars)}" />
+            </div>
+            <div class="k">
+              <label>Take profit (fraction)</label>
+              <input id="ed_tp" class="in mono" value="${num(rules.takeProfitPct)}" />
+            </div>
+            <div class="k">
+              <label>Stop loss (fraction)</label>
+              <input id="ed_sl" class="in mono" value="${num(rules.stopLossPct)}" />
+            </div>
+          </div>
+          <div class="hr"></div>
+          <div class="row">
+            <button id="ed_save" class="btn primary">Save to API</button>
+            <button id="ed_delete" class="btn danger">Delete</button>
+            <span class="muted tiny">ID: <span class="mono">${escapeHtml(s.id||"")}</span></span>
+          </div>
+          <div id="ed_msg" style="margin-top:10px"></div>
+        `;
+
+        $("#ed_save").addEventListener("click", () => saveEditor(s));
+        $("#ed_delete").addEventListener("click", () => deleteSelected(s));
+      }
+
+      function parseEditor(){
+        const s = selectedStrategy() || defaultStrategy();
+        const next = JSON.parse(JSON.stringify(s));
+        next.name = $("#ed_name").value.trim() || "Strategy";
+        next.symbol = $("#ed_symbol").value.trim() || "ETHUSD";
+        next.rules = next.rules || {};
+
+        next.rules.emaFast = intV("#ed_emaFast", 12);
+        next.rules.emaSlow = intV("#ed_emaSlow", 26);
+        next.rules.rsiLen = intV("#ed_rsiLen", 14);
+        next.rules.rsiBuyBelow = floatV("#ed_rsiBuyBelow", 38);
+        next.rules.rsiSellAbove = floatV("#ed_rsiSellAbove", 66);
+        next.rules.riskPerTrade = clamp(floatV("#ed_risk", 0.2), 0.01, 0.95);
+        next.rules.slippageBps = clamp(intV("#ed_slip", 35), 0, 1000);
+        next.rules.cooldownBars = clamp(intV("#ed_cooldown", 3), 0, 50);
+        next.rules.takeProfitPct = clamp(floatV("#ed_tp", 0.032), 0, 0.9);
+        next.rules.stopLossPct = clamp(floatV("#ed_sl", 0.017), 0, 0.9);
+        return next;
+      }
+
+      async function saveEditor(cur){
+        if (!S.apiOk) return toast("connect to API first", "warn");
