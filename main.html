@@ -768,3 +768,73 @@
             </div>
             <div class="hint">
               <strong>CSV format</strong><br/>
+              <span class="mono">ts,open,high,low,close,vol</span><br/>
+              <span class="muted">ts can be ms, seconds, or ISO8601. Header row is allowed.</span>
+              <div class="hr"></div>
+              <div class="muted tiny">Tip: keep datasets under a few MB for quick iteration.</div>
+            </div>
+          </div>
+        `;
+      }
+
+      function loadDemoCandles(){
+        const now = Date.now();
+        let rows = ["ts,open,high,low,close,vol"];
+        let px = 1800;
+        for (let i=0;i<420;i++){
+          const t = now - (420-i)*60*60*1000;
+          const drift = Math.sin(i/18)*7 + Math.cos(i/43)*4;
+          const shock = (Math.random()-0.5)*10;
+          const close = px + drift + shock;
+          const high = Math.max(px, close) + Math.random()*6;
+          const low = Math.min(px, close) - Math.random()*6;
+          const open = px + (Math.random()-0.5)*4;
+          const vol = 100 + Math.random()*140;
+          rows.push([t, open.toFixed(2), high.toFixed(2), low.toFixed(2), close.toFixed(2), vol.toFixed(2)].join(","));
+          px = close;
+        }
+        S.backtest.csv = rows.join("\n");
+        renderBacktest();
+        toast("demo candles loaded", "ok");
+      }
+
+      // ---------------------------- Logs pane ----------------------------
+      function renderLogs(){
+        const pane = $("#pane_logs");
+        pane.innerHTML = `
+          <div class="row">
+            <button id="lg_tail" class="btn">Tail</button>
+            <button id="lg_clear" class="btn">Clear</button>
+            <button id="lg_stream" class="btn primary">Stream</button>
+            <span class="muted tiny">SSE stream auto-reconnects while API is reachable.</span>
+          </div>
+          <div class="hr"></div>
+          <div class="logBox">
+            <div class="logHd">
+              <div class="row">
+                <span class="badge mono">events: <span id="lg_count">0</span></span>
+                <span class="badge mono">mode: <span id="lg_mode">idle</span></span>
+              </div>
+              <div class="row">
+                <label class="tiny muted">filter</label>
+                <input id="lg_filter" class="in mono" style="min-width:220px" placeholder="topic or text..." />
+              </div>
+            </div>
+            <div id="lg_box" class="log"></div>
+          </div>
+        `;
+        $("#lg_tail").addEventListener("click", () => tailLogs());
+        $("#lg_clear").addEventListener("click", () => { S.logs = []; renderLogBox(); });
+        $("#lg_stream").addEventListener("click", () => { if (S.sse) stopSse(); else startSse(true); });
+        $("#lg_filter").addEventListener("input", () => renderLogBox());
+        renderLogBox();
+      }
+
+      async function tailLogs(){
+        if (!S.apiOk) return toast("connect to API first", "warn");
+        try{
+          const res = await apiGet("/api/logs/tail?n=300");
+          S.logs = (res.events || []);
+          renderLogBox();
+          toast("log tail loaded", "ok");
+        }catch(e){
