@@ -908,3 +908,73 @@
         pane.innerHTML = `
           <div class="two">
             <div class="k">
+              <label>Paper fee (bps)</label>
+              <input id="st_fee" class="in mono" value="${escapeAttr(String(s.paperFeeBps ?? 8))}" />
+            </div>
+            <div class="k wide">
+              <label>Note</label>
+              <input id="st_note" class="in" value="${escapeAttr(String(s.note ?? ""))}" />
+            </div>
+          </div>
+          <div class="row" style="margin-top:10px">
+            <div class="k wide">
+              <label>API token (stored locally; placeholder for auth)</label>
+              <input id="st_tok" class="in mono" value="${escapeAttr(String(s.apiToken ?? ""))}" />
+            </div>
+          </div>
+          <div class="row" style="margin-top:12px">
+            <button id="st_save" class="btn primary">Save settings</button>
+            <button id="st_reload" class="btn">Reload</button>
+            <span class="muted tiny">Settings are stored under the server data dir.</span>
+          </div>
+          <div id="st_msg" style="margin-top:10px"></div>
+        `;
+        $("#st_save").addEventListener("click", () => saveSettings());
+        $("#st_reload").addEventListener("click", () => refreshSettings(true));
+      }
+
+      async function refreshSettings(user){
+        if (!S.apiOk) return;
+        try{
+          const res = await apiGet("/api/settings");
+          S.settings = res.settings || null;
+          renderSettings();
+          if (user) toast("settings reloaded", "ok");
+        }catch(e){
+          if (user) toast("settings load failed: " + e.message, "bad");
+        }
+      }
+
+      async function saveSettings(){
+        if (!S.apiOk) return toast("connect to API first", "warn");
+        const msg = $("#st_msg");
+        msg.innerHTML = "";
+        try{
+          const fee = clamp(intV("#st_fee", 8), 0, 250);
+          const note = ($("#st_note").value || "").trim();
+          const tok = ($("#st_tok").value || "").trim();
+          const body = { settings: { paperFeeBps: fee, note, apiToken: tok } };
+          const res = await apiSend("/api/settings", "PUT", body);
+          S.settings = res.settings || null;
+          msg.innerHTML = `<div class="ok">Saved.</div>`;
+          toast("settings saved", "ok");
+        }catch(e){
+          msg.innerHTML = `<div class="err">Save failed: ${escapeHtml(e.message)}</div>`;
+        }
+      }
+
+      // ---------------------------- Charting ----------------------------
+      function clearChart(){
+        const c = $("#bt_chart");
+        if (!c) return;
+        const g = c.getContext("2d");
+        g.clearRect(0,0,c.width,c.height);
+      }
+
+      function drawChart(curve){
+        const c = $("#bt_chart");
+        if (!c) return;
+        const g = c.getContext("2d");
+        const w = c.width, h = c.height;
+        g.clearRect(0,0,w,h);
+        if (!curve || !curve.length){
