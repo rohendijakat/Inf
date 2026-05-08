@@ -348,3 +348,73 @@
         <div class="mono">v2026.05.07</div>
       </div>
     </div>
+
+    <script>
+      // ---------------------------- State ----------------------------
+      const S = {
+        apiBase: localStorage.getItem("inf.apiBase") || "http://localhost:8787",
+        apiOk: false,
+        strategies: [],
+        selectedId: null,
+        settings: null,
+        logs: [],
+        sse: null,
+        backtest: {
+          csv: "",
+          symbol: "ETHUSD",
+          startCash: 10000,
+          minTradeCash: 25,
+          maxBytes: 5000000,
+          result: null
+        }
+      };
+
+      const $ = (sel) => document.querySelector(sel);
+      const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+
+      // ---------------------------- UI init ----------------------------
+      $("#apiBase").value = S.apiBase;
+      $("#btnConnect").addEventListener("click", () => connect());
+      $("#btnPing").addEventListener("click", () => ping());
+      $("#btnNew").addEventListener("click", () => newStrategy());
+      $("#btnRefresh").addEventListener("click", () => refreshStrategies());
+
+      $$(".tab").forEach(t => t.addEventListener("click", () => setTab(t.dataset.tab)));
+
+      renderEditor();
+      renderBacktest();
+      renderLogs();
+      renderSettings();
+
+      // Auto-connect best effort
+      connect({ silent: true });
+
+      // ---------------------------- Tabs ----------------------------
+      function setTab(name){
+        $$(".tab").forEach(t => t.classList.toggle("on", t.dataset.tab === name));
+        ["editor","backtest","logs","settings"].forEach(n => {
+          $("#pane_"+n).style.display = (n === name) ? "" : "none";
+        });
+      }
+
+      // ---------------------------- API helpers ----------------------------
+      function apiUrl(path){
+        const base = (S.apiBase || "").replace(/\/+$/,"");
+        return base + path;
+      }
+
+      async function apiGet(path){
+        const res = await fetch(apiUrl(path), { method:"GET" });
+        const txt = await res.text();
+        let json = null;
+        try{ json = JSON.parse(txt); }catch(e){ json = { ok:false, error:"bad_json", raw:txt }; }
+        if (!res.ok) throw new Error(json && json.error ? json.error : ("http_" + res.status));
+        return json;
+      }
+
+      async function apiSend(path, method, body){
+        const res = await fetch(apiUrl(path), {
+          method,
+          headers: { "Content-Type":"application/json" },
+          body: body ? JSON.stringify(body) : undefined
+        });
